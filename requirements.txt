@@ -1,0 +1,22 @@
+# Requirements for PDF to TIFF converter
+pdf2image==1.16.3
+Pillow==10.2.0
+
+# Note: pdf2image also requires poppler-utils to be installed on the system
+# 
+# Installation instructions:
+# 
+# 1. Install Python packages:
+#    pip install -r requirements.txt
+#
+# 2. Install poppler-utils (required by pdf2image):
+#    
+#    On Ubuntu/Debian:
+#    sudo apt-get install poppler-utils
+#    
+#    On macOS:
+#    brew install poppler
+#    
+#    On Windows:
+#    Download from: https://github.com/oschwartz10612/poppler-windows/releases/
+#    Extract and add the 'bin' folder to your PATH

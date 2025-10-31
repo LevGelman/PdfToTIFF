@@ -442,21 +442,75 @@
         }
 
         // Form submission
-        uploadForm.addEventListener('submit', (e) => {
+        uploadForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+
             if (selectedFiles.length === 0) {
-                e.preventDefault();
                 alert('Please select at least one PDF file');
                 return;
             }
 
-            // Create a new DataTransfer object to set files
-            const dataTransfer = new DataTransfer();
-            selectedFiles.forEach(file => dataTransfer.items.add(file));
-            fileInput.files = dataTransfer.files;
+            // Create FormData
+            const formData = new FormData();
+            selectedFiles.forEach(file => formData.append('pdf_files', file));
+            formData.append('dpi', document.getElementById('dpi').value);
 
             // Show loading
             loading.classList.add('active');
             convertBtn.disabled = true;
+
+            try {
+                // Send request
+                const response = await fetch('/convert', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (response.ok) {
+                    // Get filename from Content-Disposition header
+                    const contentDisposition = response.headers.get('Content-Disposition');
+                    let filename = 'combined.tiff';
+                    if (contentDisposition) {
+                        const matches = /filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/.exec(contentDisposition);
+                        if (matches && matches[1]) {
+                            filename = matches[1].replace(/['"]/g, '');
+                        }
+                    }
+
+                    // Download the file
+                    const blob = await response.blob();
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.href = url;
+                    a.download = filename;
+                    document.body.appendChild(a);
+                    a.click();
+                    window.URL.revokeObjectURL(url);
+                    document.body.removeChild(a);
+
+                    // Hide loading and show success message
+                    loading.classList.remove('active');
+                    convertBtn.disabled = false;
+
+                    // Show success message
+                    alert('✓ TIFF file downloaded successfully!');
+
+                    // Optional: Clear the file list
+                    selectedFiles = [];
+                    updateFileList();
+                    updateConvertButton();
+                } else {
+                    // Handle error
+                    const text = await response.text();
+                    loading.classList.remove('active');
+                    convertBtn.disabled = false;
+                    alert('Error: ' + text);
+                }
+            } catch (error) {
+                loading.classList.remove('active');
+                convertBtn.disabled = false;
+                alert('Error: ' + error.message);
+            }
         });
     </script>
 </body>

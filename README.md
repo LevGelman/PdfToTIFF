@@ -1,16 +1,30 @@
 # PDF to Multi-Page TIFF Converter
 
-A Python utility to convert multiple PDF files into a single multi-page TIFF file. This tool processes all pages from multiple PDFs and combines them into one TIFF file, preserving the page order.
+A Flask web application that converts multiple PDF files into a single multi-page TIFF file. Upload PDFs through a modern web interface and download the combined TIFF file. Ready for deployment to Azure Web App.
+
+## Live Demo
+
+Upload multiple PDFs → Get a single multi-page TIFF file
 
 ## Features
 
+### Web Application
+- 🌐 Modern, responsive web interface
+- 📤 Drag-and-drop file upload
+- 📥 Instant download of converted TIFF
+- ⚙️ Configurable DPI settings
+- 📊 Real-time file list management
+- 🔒 Secure file handling
+- ☁️ Ready for Azure Web App deployment
+
+### PDF to TIFF Conversion
 - ✅ Convert multiple PDF files to a single TIFF
-- ✅ Process entire folders of PDFs automatically
 - ✅ Preserve all pages from all PDFs
-- ✅ Configurable image resolution (DPI)
-- ✅ Multiple compression options
+- ✅ Configurable image resolution (DPI: 150-400)
+- ✅ Efficient compression (tiff_deflate)
 - ✅ Progress tracking during conversion
 - ✅ Error handling for corrupted PDFs
+- ✅ Files processed in alphabetical order
 - ✅ No OOP - simple procedural Python code
 
 ## Requirements
@@ -60,22 +74,56 @@ brew install poppler
 sudo dnf install poppler-utils
 ```
 
-## Usage
+## Quick Start
 
-### Quick Start (Simple Version)
+### Running the Web Application Locally
 
-1. Edit `pdf_to_tiff_simple.py` and modify the configuration section:
+1. **Install dependencies:**
+```bash
+pip install -r requirements.txt
 
-```python
-INPUT_FOLDER = "./pdf_files"  # Your PDF folder
-OUTPUT_FILE = "./output.tiff"  # Output TIFF path
-DPI = 200  # Resolution
+# Install poppler (required system dependency)
+# Ubuntu/Debian:
+sudo apt-get install poppler-utils
+
+# macOS:
+brew install poppler
 ```
 
-2. Run the script:
+2. **Run the Flask app:**
+```bash
+python app.py
+```
+
+3. **Open your browser:**
+   - Navigate to `http://localhost:5000`
+   - Upload PDF files
+   - Choose DPI quality
+   - Click "Convert to TIFF"
+   - Download your multi-page TIFF file
+
+### Running with Docker
 
 ```bash
+# Build and run
+docker-compose up
+
+# Visit http://localhost:5000
+```
+
+### Command-Line Usage (Original Scripts)
+
+The original command-line scripts are still available:
+
+**Simple version** ([pdf_to_tiff_simple.py](pdf_to_tiff_simple.py)):
+```bash
+# Edit configuration in the file, then run:
 python pdf_to_tiff_simple.py
+```
+
+**Full version** ([pdf_to_tiff.py](pdf_to_tiff.py)):
+```bash
+python pdf_to_tiff.py
 ```
 
 ### Advanced Usage (Full Version)
@@ -280,21 +328,71 @@ for folder in folders:
 - TIFF file size can be very large for many pages at high DPI
 - Processing time increases with file size and DPI
 
+## Deployment to Azure Web App
+
+See [DEPLOYMENT.md](DEPLOYMENT.md) for complete deployment instructions including:
+- Deploy via Azure Portal (GUI)
+- Deploy via Azure CLI
+- Deploy with Docker
+- Configuration and troubleshooting
+- Cost optimization tips
+
+**Quick deployment steps:**
+1. Create Azure Web App (Python 3.11, Linux)
+2. Set SECRET_KEY in Application Settings
+3. Deploy code via Git or Docker
+4. Install poppler-utils
+5. Access your app at `https://your-app-name.azurewebsites.net`
+
+## Project Structure
+
+```
+PdfToTIFF/
+├── app.py                    # Flask web application
+├── templates/
+│   └── index.html           # Web interface
+├── pdf_to_tiff.py           # Original CLI script (full version)
+├── pdf_to_tiff_simple.py    # Original CLI script (simple version)
+├── requirements.txt          # Python dependencies
+├── Dockerfile               # Docker container configuration
+├── docker-compose.yml       # Local Docker setup
+├── startup.sh               # Azure startup script
+├── web.config               # Azure Web App configuration
+├── .deployment              # Azure deployment configuration
+├── .gitignore              # Git ignore rules
+├── README.md               # This file
+└── DEPLOYMENT.md           # Detailed deployment guide
+```
+
 ## License
 
 This project is provided as-is for educational and commercial use.
 
 ## Support
 
-For issues or questions:
-1. Check the troubleshooting section
+### Documentation
+- [Deployment Guide](DEPLOYMENT.md) - Complete Azure deployment instructions
+- [Flask Documentation](https://flask.palletsprojects.com/)
+- [Azure Web Apps](https://docs.microsoft.com/azure/app-service/)
+
+### Troubleshooting
+1. Check the troubleshooting section in [DEPLOYMENT.md](DEPLOYMENT.md)
 2. Ensure all requirements are installed
 3. Verify PDF files are not corrupted
 4. Try with a single small PDF first
+5. Check application logs for errors
 
 ## Version History
 
-- **1.0.0** - Initial release
+- **2.0.0** - Web Application Release
+  - Flask web interface with drag-and-drop upload
+  - Real-time file management
+  - Azure Web App deployment support
+  - Docker containerization
+  - Responsive design
+
+- **1.0.0** - Initial Release
+  - Command-line PDF to TIFF conversion
   - Multiple PDF to single TIFF conversion
   - Configurable DPI and compression
   - Batch processing support

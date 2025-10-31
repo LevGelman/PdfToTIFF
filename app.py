@@ -8,6 +8,7 @@ import os
 import glob
 import tempfile
 import shutil
+import subprocess
 from io import BytesIO
 from datetime import datetime
 from flask import Flask, render_template, request, send_file, flash, redirect, url_for
@@ -17,6 +18,62 @@ from PIL import Image
 
 app = Flask(__name__)
 app.secret_key = os.environ.get('SECRET_KEY', 'dev-secret-key-change-in-production')
+
+
+def _resolve_poppler_path():
+    """Return the directory containing poppler utilities, if it can be located."""
+    env_path = os.environ.get("POPPLER_PATH")
+    if env_path and os.path.exists(os.path.join(env_path, "pdfinfo")):
+        return env_path
+
+    for candidate in ("/usr/bin", "/usr/local/bin", "/opt/homebrew/bin"):
+        if os.path.exists(os.path.join(candidate, "pdfinfo")):
+            return candidate
+
+    return None
+
+
+POPPLER_PATH = _resolve_poppler_path()
+
+
+def _log_poppler_version():
+    """Log poppler availability to aid in deployment diagnostics."""
+    pdfinfo_executable = "pdfinfo"
+    if POPPLER_PATH:
+        pdfinfo_executable = os.path.join(POPPLER_PATH, "pdfinfo")
+
+    try:
+        result = subprocess.run(
+            [pdfinfo_executable, "-v"],
+            check=False,
+            capture_output=True,
+            text=True
+        )
+
+        if result.returncode == 0:
+            message = result.stdout.strip() or result.stderr.strip() or "pdfinfo available"
+            app.logger.info("Poppler detected: %s", message.splitlines()[0])
+        else:
+            stderr = result.stderr.strip() or result.stdout.strip() or "unknown error"
+            app.logger.warning(
+                "Poppler check returned non-zero exit (%s): %s",
+                result.returncode,
+                stderr.splitlines()[0]
+            )
+    except FileNotFoundError:
+        app.logger.warning(
+            "Poppler utilities not found (pdfinfo missing). Install poppler-utils to enable conversion."
+        )
+    except Exception:
+        app.logger.exception("Unexpected error while checking for poppler utilities")
+
+
+if POPPLER_PATH:
+    app.logger.info("Using poppler path: %s", POPPLER_PATH)
+else:
+    app.logger.warning("Poppler path could not be resolved; falling back to PATH lookups")
+
+_log_poppler_version()
 
 # Configuration
 UPLOAD_FOLDER = tempfile.gettempdir()
@@ -59,7 +116,11 @@ def convert_pdfs_to_tiff(pdf_files, output_path, dpi=DEFAULT_DPI):
     for pdf_file in pdf_files:
         try:
             # Convert PDF pages to images
-            images = convert_from_path(pdf_file, dpi=dpi)
+            convert_kwargs = {"dpi": dpi}
+            if POPPLER_PATH:
+                convert_kwargs["poppler_path"] = POPPLER_PATH
+
+            images = convert_from_path(pdf_file, **convert_kwargs)
 
             # Add each page to collection
             for image in images:
@@ -67,6 +128,7 @@ def convert_pdfs_to_tiff(pdf_files, output_path, dpi=DEFAULT_DPI):
                 total_pages += 1
 
         except Exception as e:
+            app.logger.exception("Failed to process PDF '%s'", os.path.basename(pdf_file))
             return False, f"Error processing {os.path.basename(pdf_file)}: {str(e)}", 0
 
     if not all_images:
@@ -87,6 +149,7 @@ def convert_pdfs_to_tiff(pdf_files, output_path, dpi=DEFAULT_DPI):
         return True, message, total_pages
 
     except Exception as e:
+        app.logger.exception("Failed to create TIFF output at '%s'", output_path)
         return False, f"Error creating TIFF file: {str(e)}", 0
 
 
@@ -152,6 +215,9 @@ def convert():
         output_path = os.path.join(temp_dir, output_filename)
 
         # Convert PDFs to TIFF
+        app.logger.info(
+            "Starting conversion for %d file(s) at %d DPI", len(saved_files), dpi
+        )
         success, message, page_count = convert_pdfs_to_tiff(saved_files, output_path, dpi)
 
         if success:
@@ -162,6 +228,13 @@ def convert():
             # Clean up temp directory
             shutil.rmtree(temp_dir, ignore_errors=True)
 
+            app.logger.info(
+                "Conversion succeeded: %d page(s) written to %s (%.2f MB)",
+                page_count,
+                output_filename,
+                len(file_data) / (1024 * 1024)
+            )
+
             # Send file from memory
             return send_file(
                 BytesIO(file_data),
@@ -170,11 +243,13 @@ def convert():
                 mimetype='image/tiff'
             )
         else:
+            app.logger.error("Conversion failed: %s", message)
             flash(f'Conversion failed: {message}', 'error')
             shutil.rmtree(temp_dir, ignore_errors=True)
             return redirect(url_for('index'))
 
     except Exception as e:
+        app.logger.exception("Unhandled error during conversion request")
         flash(f'An error occurred: {str(e)}', 'error')
         shutil.rmtree(temp_dir, ignore_errors=True)
         return redirect(url_for('index'))

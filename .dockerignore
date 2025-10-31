@@ -1,0 +1,47 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+*.egg-info/
+
+# Virtual Environment
+venv/
+ENV/
+env/
+.venv/
+
+# Git
+.git/
+.gitignore
+
+# IDE
+.vscode/
+.idea/
+.claude/
+
+# Documentation (not needed in container)
+*.md
+!README.md
+
+# Temporary files
+*.tmp
+*.tiff
+*.tif
+*.pdf
+pdf_files/
+uploads/
+temp/
+
+# Logs
+*.log
+
+# Docker
+docker-compose.yml
+Dockerfile
+.dockerignore
+
+# Tests
+test_local.py
+setup_venv.sh

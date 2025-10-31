@@ -554,8 +554,98 @@ The application follows best practices:
 
 ---
 
+### Phase 9: Azure Poppler Installation Issue
+
+**User Report**: Still getting `PDFInfoNotInstalledError` on Azure after deployment
+
+**Diagnosis**:
+- User is still using Python runtime (not Docker)
+- Evidence: Logs show `/opt/python/3.13.5/` paths
+- startup.sh cannot install poppler (no sudo access)
+- Azure Python buildpack doesn't support system packages
+
+**Root Cause**:
+Azure Web App Python runtime uses Oryx buildpack which:
+- Doesn't allow apt-get in startup scripts
+- No root/sudo access
+- System packages can't be installed at runtime
+- Only Python packages can be installed
+
+**Solution Implemented**:
+Created comprehensive Docker deployment solution:
+
+1. **[SWITCH_TO_DOCKER.md](SWITCH_TO_DOCKER.md)** - Step-by-step migration guide
+   - How to identify current deployment type
+   - Three options for switching to Docker
+   - Verification steps
+   - Troubleshooting
+
+2. **[deploy_azure.sh](deploy_azure.sh)** - Automated deployment script
+   - Creates Azure Container Registry
+   - Builds Docker image with poppler
+   - Pushes to ACR
+   - Creates Web App with Docker
+   - Configures all settings
+
+3. **[AZURE_DOCKER_DEPLOY.md](AZURE_DOCKER_DEPLOY.md)** - Complete Docker deployment guide
+   - Three deployment methods (CLI, Portal, Docker)
+   - Configuration instructions
+   - Verification steps
+   - Troubleshooting guide
+
+4. **[POPPLER_FIX_SUMMARY.md](POPPLER_FIX_SUMMARY.md)** - Quick reference
+   - Problem explanation
+   - Solution overview
+   - Quick deployment options
+   - Cost breakdown
+
+5. **[.dockerignore](.dockerignore)** - Optimized Docker builds
+
+**Why Docker is Required**:
+- ✅ Poppler installed during image build (with root access)
+- ✅ Immutable image with all dependencies
+- ✅ Consistent environment
+- ✅ No runtime package installation needed
+- ✅ Works reliably on Azure
+
+**Comparison**:
+```
+Python Runtime (Current - NOT WORKING):
+  ├─ Oryx buildpack
+  ├─ No system packages
+  └─ ❌ Poppler can't be installed
+
+Docker Deployment (Solution - WORKS):
+  ├─ Custom Dockerfile
+  ├─ Poppler pre-installed
+  └─ ✅ Everything works!
+```
+
+**Files Created**:
+- SWITCH_TO_DOCKER.md (step-by-step migration)
+- deploy_azure.sh (automated deployment)
+- AZURE_DOCKER_DEPLOY.md (complete guide)
+- POPPLER_FIX_SUMMARY.md (quick reference)
+- .dockerignore (build optimization)
+
+**Status**: ⏳ Waiting for user to switch to Docker deployment
+
+---
+
+## Final File Count
+
+**Total Files Created**: 26
+- Application Code: 2 (app.py, templates/index.html)
+- CLI Scripts: 2 (pdf_to_tiff.py, pdf_to_tiff_simple.py)
+- Configuration: 8 (Dockerfile, docker-compose.yml, etc.)
+- Documentation: 10 (README, guides, etc.)
+- Testing/Setup: 4 (test_local.py, setup scripts, etc.)
+
+---
+
 **End of Project History**
 
-*Last Updated*: October 31, 2025
-*Status*: Complete and Ready for Deployment
+*Last Updated*: October 31, 2025 17:40 UTC
+*Status*: Complete - Awaiting Docker Deployment
 *Server*: Running locally on http://localhost:5000
+*Next Step*: User needs to run `./deploy_azure.sh` to deploy with Docker

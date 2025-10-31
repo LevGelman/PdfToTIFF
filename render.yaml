@@ -1,0 +1,16 @@
+# Render.com deployment configuration
+# This file tells Render how to deploy your app
+
+services:
+  - type: web
+    name: pdf-to-tiff-converter
+    runtime: docker
+    plan: free
+    dockerfilePath: ./Dockerfile
+    envVars:
+      - key: SECRET_KEY
+        generateValue: true
+      - key: PORT
+        value: 8000
+    # Free tier: auto-sleeps after 15 min of inactivity
+    # First request after sleep takes ~30-60 seconds to wake up

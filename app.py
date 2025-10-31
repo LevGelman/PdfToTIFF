@@ -8,6 +8,7 @@ import os
 import glob
 import tempfile
 import shutil
+from io import BytesIO
 from datetime import datetime
 from flask import Flask, render_template, request, send_file, flash, redirect, url_for
 from werkzeug.utils import secure_filename
@@ -133,7 +134,7 @@ def convert():
 
     try:
         for file in files:
-            if file and allowed_file(file.filename):
+            if file and file.filename and allowed_file(file.filename):
                 filename = secure_filename(file.filename)
                 if filename:
                     file_path = os.path.join(temp_dir, filename)
@@ -154,25 +155,29 @@ def convert():
         success, message, page_count = convert_pdfs_to_tiff(saved_files, output_path, dpi)
 
         if success:
-            # Send file to user
+            # Read file into memory before sending to avoid cleanup issues
+            with open(output_path, 'rb') as f:
+                file_data = f.read()
+
+            # Clean up temp directory
+            shutil.rmtree(temp_dir, ignore_errors=True)
+
+            # Send file from memory
             return send_file(
-                output_path,
+                BytesIO(file_data),
                 as_attachment=True,
                 download_name=output_filename,
                 mimetype='image/tiff'
             )
         else:
             flash(f'Conversion failed: {message}', 'error')
+            shutil.rmtree(temp_dir, ignore_errors=True)
             return redirect(url_for('index'))
 
     except Exception as e:
         flash(f'An error occurred: {str(e)}', 'error')
+        shutil.rmtree(temp_dir, ignore_errors=True)
         return redirect(url_for('index'))
-
-    finally:
-        # Note: temp_dir cleanup happens after response is sent
-        # For production, consider using a background task
-        pass
 
 
 @app.route('/health', methods=['GET'])
